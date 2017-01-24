@@ -9,5 +9,6 @@
                #:cl-json)
   :serial t
   :components ((:file "package")
+               (:file "ps-library")
                (:file "npm")))
 
