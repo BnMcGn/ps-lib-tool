@@ -4,25 +4,13 @@
 
 ;;; "cl-npm" goes here. Hacks and cwdebuggingglory await!
 
+;;FIXME: These shouldn't be hard coded.
 (defvar *npm-executable-path* #p"/usr/bin/npm")
 (defvar *node-executable-path* #p"/usr/bin/nodejs")
+(defvar *browserify-path* #p"/usr/local/bin/browserify")
 (defvar *cache-path* (asdf:system-relative-pathname
                       'cl-npm "cache" :type :directory))
 
-(defun extend-pathname (path &rest extensions)
-  (let ((exts
-         (apply
-          #'concatenate 'list
-          (mapcar (lambda (x)
-                    (if (stringp x)
-                        (list x)
-                        (let ((pd (pathname-directory x)))
-                          (unless (eq (car pd) :relative)
-                            (error "Extension must not be an absolute path"))
-                          (cdr pd))))
-                  extensions))))
-    (make-pathname :defaults path
-                   :directory (append (pathname-directory path) exts))))
 
 (defun package-json-path (path)
   (merge-pathnames path "package.json"))
@@ -64,12 +52,37 @@
   "Updates all npm packages in the cache."
   (npm-command "update"))
 
-(defun install (package-name &key global)
+(defun install (package-name &key version global)
   "Installs named package in the cache directory. If global keyword is set attempts to install package globally."
-  (apply #'npm-command `("install" ,@(when global "-g") ,package-name)))
+  (let ((package-name (if version (format nil "~a@~a" package-name version) package-name)))
+    (apply #'npm-command `("install" ,@(when global (list "-g")) ,package-name))))
+
+(defun package-list ()
+  (mapcar (lambda (itm) (split-sequence:split-sequence
+                         #\@
+                         (gadgets:last-car (split-sequence:split-sequence #\  itm))))
+          (cdr (npm-command "list"))))
+
+(defun up-to-date-p (installed requested)
+  (when installed
+    (if requested
+        (semver:version<= (semver:read-version-from-string requested)
+                          (semver:read-version-from-string installed)))))
+
+(defun ensure-packages-installed (packlist)
+  (let ((installed (hu:collecting-hash-table ()
+                       (dolist (pack (package-list))
+                         (hu:collect (car pack) (second pack))))))
+    (dolist (rpack packlist)
+      (alexandria:if-let ((version (gethash (car rpack) installed)))
+        (unless (up-to-date-p version (second rpack))
+          (install (car rpack) :version (second rpack)))
+        (install (car rpack) :version (second rpack))))))
 
 (defun uninstall (package-name &key save global)
   (apply #'npm-command
          `("uninstall"
            ,@(when save "--save") ,@(when global "-g") ,package-name)))
+
+
 

@@ -6,9 +6,10 @@
   :license "MIT"
   :depends-on (#:uiop
                #:external-program
-               #:cl-json)
+               #:cl-json
+               #:gadgets
+               #:alexandria)
   :serial t
   :components ((:file "package")
-               (:file "ps-library")
                (:file "npm")))
 
