@@ -13,5 +13,6 @@
   :serial t
   :components ((:file "package")
                (:file "npm")
-               (:file "nodelib"))
+               (:file "ps-library")
+               (:file "nodelib")))
 

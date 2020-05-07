@@ -4,10 +4,10 @@
 
 (defvar *ps-packages* (make-hash-table))
 
-(defun def-ps-package name (&key use npm-libraries code export)
+(defun def-ps-package (name &key use npm-libraries code export)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
 
-  (setf (gethash *ps-packages* name)
+  (setf (gethash name *ps-packages*)
         (list
          :use use
          :npm-libraries npm-libraries

@@ -1,3 +1,4 @@
+(in-package #:cl-npm)
 
 (defun handle-keyed-list (klist)
   (cond
@@ -33,11 +34,12 @@
                      &key
                        (license "[specify license]")
                        (description "[add a description]"))
-  (with-open-file (s (merge-pathnames location "README.md"))
+  (with-open-file (s (merge-pathnames location "README.md") :direction :output
+                                                            :if-does-not-exist :create)
     (format s "# ~:(~a~) ~%~% ~a ~%~% ### License ~%~% ~a ~&" name description license)))
 
 (defun write-build.sh (location filenames)
-  (with-open-file (s (merge-pathnames location "build.sh"))
+  (with-open-file (s (merge-pathnames location "build.sh") :direction :output :if-does-not-exist :create)
     (format s
             "#!/bin/sh
 
@@ -47,26 +49,29 @@ ${./node_modules/sigil_cli/sigil ./src/~a.parenscript > ~:*~a.js~%
 #./node_modules/sigil_cli/sigil ./src/your_file.parenscript > your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
-  (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
-                                    :file (format nil "~a.parenscript" name))
-                     :direction :output)
-    ;;FIXME: add include for resources.lisp
-    (format s ";;; ~a.parenscript" name)))
+  (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
+                             :name (format nil "~a.parenscript" name))))
+    (ensure-directories-exist path)
+    (with-open-file (s path
+                     :direction :output :if-does-not-exist :create)
+      ;;FIXME: add include for resources.lisp
+      (format s ";;; ~a.parenscript" name))))
 
 (defun write-nodelib-project-to-location (location name data &key license description main)
   (safe-to-write? location)
   (ensure-directories-exist location)
-  (write-build.sh location (list (or main name))
+  (write-build.sh location (list (or main name)))
   (write-readme name location :license license :description description)
   (write-sourcefile location (or main name))
 
 
-  (with-open-file (out (merge-pathnames location "package.json") :direction :output)
+  (with-open-file (out (merge-pathnames location "package.json") :direction :output
+                       :if-does-not-exist :create)
     (with-input-from-string (s (json:encode-json-plist-to-string data))
       (pretty-print-json s out))))
 
 
-(defun make-project (location &key name description version license repository main
+(defun make-node-lib (location &key name description version license repository main
                                 scripts dev-dependencies keywords)
   (let ((name (or name (pathname-name location) (car (last (pathname-directory location))))))
     (write-nodelib-project-to-location
