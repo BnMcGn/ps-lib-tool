@@ -8,8 +8,10 @@
                #:external-program
                #:cl-json
                #:gadgets
-               #:alexandria)
+               #:alexandria
+               #:cl-semver)
   :serial t
   :components ((:file "package")
-               (:file "npm")))
+               (:file "npm")
+               (:file "nodelib"))
 

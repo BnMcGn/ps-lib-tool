@@ -12,5 +12,6 @@
    #:uninstall
    #:install
    #:npm-version
-   #:webpack))
+   #:webpack
+   #:installed?))
 

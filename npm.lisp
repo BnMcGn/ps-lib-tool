@@ -27,6 +27,14 @@
      (format nil "Nodejs not found at ~a. Please install node or specify an executable with the *node-executable-path* variable." *node-executable-path*)))
   *node-executable-path*)
 
+(defun browserify-executable-path ()
+  (unless (uiop:file-exists-p *browserify-path*)
+    (error
+     (format nil
+             "Browserify not found at ~a. Please install browserify or specify an executable with the *browserify-path* variable."
+             *browserify-path*)))
+  *browserify-path*)
+
 (defun load-package-json-at-path (path)
   (when (uiop:file-exists-p (package-json-path path))
     (json:decode-json-from-source (package-json-path path))))
@@ -83,6 +91,14 @@
   (apply #'npm-command
          `("uninstall"
            ,@(when save "--save") ,@(when global "-g") ,package-name)))
+
+(defun build-browserify-bundle (destination modules)
+  (uiop:with-current-directory (*cache-path*)
+    (uiop/run-program:run-program
+     (list* (browserify-executable-path)
+            (mapcan (lambda (module) (list "-r" module))
+                    modules))
+     :output destination)))
 
 
 
