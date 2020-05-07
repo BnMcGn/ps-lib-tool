@@ -43,10 +43,10 @@
     (format s
             "#!/bin/sh
 
-${./node_modules/sigil_cli/sigil ./src/~a.parenscript > ~:*~a.js~%
+~{node_modules/sigil-cli/sigil src/~a.parenscript > ~:*~a.js~%~}
 
 #Add source files here
-#./node_modules/sigil_cli/sigil ./src/your_file.parenscript > your_file.js~&" filenames)))
+#node_modules/sigil-cli/sigil src/your_file.parenscript > your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
   (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
@@ -84,7 +84,7 @@ ${./node_modules/sigil_cli/sigil ./src/~a.parenscript > ~:*~a.js~%
       :license license
       :main (or main (format nil "~a.js" name))
       :repository repository
-      :scripts (list* "build" "./build.sh" scripts)
+      :scripts (list* "build" "sh build.sh" scripts)
       :dev-dependencies
       (list* "sigil-cli" "^1.0.6" dev-dependencies)
       :keywords keywords)
