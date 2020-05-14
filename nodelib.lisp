@@ -27,7 +27,7 @@
     (error "Project destination already exists as a file"))
   (when (and (uiop:directory-exists-p location)
              (some (lambda (x) (probe-file (merge-pathnames location x)))
-                   '("README.md" "package.json" "src" "node_modules" "build.sh" "resources.lisp")))
+                   '("README.md" "package.json" "src" "node_modules" "build.sh")))
     (error "Project directory already contains files")))
 
 (defun write-readme (name location
@@ -43,10 +43,10 @@
     (format s
             "#!/bin/sh
 
-~{node_modules/sigil-cli/sigil src/~a.parenscript > ~:*~a.js~%~}
+~{node_modules/sigil-cli/sigil src/~a.parenscript --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" > ~:*~a.js~%~}
 
 #Add source files here
-#node_modules/sigil-cli/sigil src/your_file.parenscript > your_file.js~&" filenames)))
+#node_modules/sigil-cli/sigil src/your_file.parenscript  --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" > your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
   (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
@@ -55,7 +55,27 @@
     (with-open-file (s path
                      :direction :output :if-does-not-exist :create)
       ;;FIXME: add include for resources.lisp
-      (format s ";;; ~a.parenscript" name))))
+      (format s ";;; ~a.parenscript~%~%(ps-load \"resources.parenscript\")" name))))
+
+(defun write-resources.lisp (location name code dependencies)
+  (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
+                                    :name "resources.parenscript")
+                     :direction :output :if-does-not-exist :create)
+    (format s ";;; Resources for ~a~%
+;;;
+(lisp
+ (progn
+   (ql:quickload 'paren6)
+   (use-package :paren6 :ps)))
+
+;;; Suggested import clauses for dependencies. Uncomment to use.
+
+~{;;; (import ((:default ~a)) ~:*)~%~}
+
+;;; Code blocks from parenscript library dependencies: ~%
+~{~a~&~}
+
+;;; " name dependencies code)))
 
 (defun write-nodelib-project-to-location (location name data &key license description main)
   (safe-to-write? location)
@@ -70,10 +90,11 @@
     (with-input-from-string (s (json:encode-json-plist-to-string data))
       (pretty-print-json s out))))
 
-
 (defun make-node-lib (location &key name description version license repository main
-                                scripts dev-dependencies keywords)
-  (let ((name (or name (pathname-name location) (car (last (pathname-directory location))))))
+                                scripts dev-dependencies dependencies ps-dependencies keywords)
+  (let ((name (or name (pathname-name location) (car (last (pathname-directory location)))))
+        (nodereqs (get-all-node-requirements ps-dependencies))
+        (deps (check-npm-imports dependencies)))
     (write-nodelib-project-to-location
      location
      name
@@ -90,7 +111,10 @@
       :keywords keywords)
      :license license
      :description description
-     :main main)))
+     :main main)
+    ;;This writes to the package.json file created in step above
+    (dolist (dep (append deps nodereqs))
+      (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))))
 
 
 

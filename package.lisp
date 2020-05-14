@@ -2,7 +2,7 @@
 
 (defpackage #:cl-npm
   (:nicknames #:npm)
-  (:use #:cl)
+  (:use #:cl #:alexandria)
   (:export
    #:*executable-path*
    #:*cache-path*
@@ -13,5 +13,6 @@
    #:install
    #:npm-version
    #:webpack
-   #:installed?))
+   #:installed?
+   #:make-node-lib))
 

@@ -52,6 +52,25 @@
      (list* (npm-executable-path) command)
      :output :lines)))
 
+(defun build-browserify-bundle (destination modules)
+  (uiop:with-current-directory (*cache-path*)
+    (uiop/run-program:run-program
+     (list* (browserify-executable-path)
+            (mapcan (lambda (module) (list "-r" module))
+                    modules))
+     :output destination)))
+
+(defun install-save (target-dir package &key version)
+  "Causes the package information to be written to the dependencies section of package.json in the target dir."
+  (let ((*cache-path* target-dir))
+    (npm-command
+     "install"
+     (if version (format nil "~a@~a" package version) package)
+     "-save")))
+
+
+;;; Dubious stuff
+
 (defun npm-version ()
   "Returns the version of the npm binary in use."
   (car (npm-command "-v")))
@@ -92,13 +111,6 @@
          `("uninstall"
            ,@(when save "--save") ,@(when global "-g") ,package-name)))
 
-(defun build-browserify-bundle (destination modules)
-  (uiop:with-current-directory (*cache-path*)
-    (uiop/run-program:run-program
-     (list* (browserify-executable-path)
-            (mapcan (lambda (module) (list "-r" module))
-                    modules))
-     :output destination)))
 
 
 
