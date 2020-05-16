@@ -22,26 +22,37 @@
     (error "Invalid item in npm-imports section"))
   imps)
 
-(defun find-all-required-ps-packages (requiring-package-symbol)
-  "Find all of the ps-packages that will be needed by the specified package. Will NOT search for packages in the depends-on section of .asd files. Dependencies must be explicitly stated in the ps-imports section of the def-ps-package form."
+(defun find-all-required-ps-packages (&rest required-syms)
+  "Recursively find all of the ps-packages that will be needed by the specified package(s). Will NOT search for packages in the depends-on section of .asd files. Dependencies must be explicitly stated in the ps-imports section of the def-ps-package form. Includes requiring packages."
   (let ((stor (make-hash-table))
-        (work (getf (gethash requiring-package-symbol *ps-packages*) :ps-imports))
+        (work required-syms)
         (new-work nil))
     (loop while work
           do (progn
                (dolist (item work)
-                 (unless (gethash item stor)
-                   (push item new-work)
-                   (setf (gethash item stor) (gethash item *ps-packages*))))
-               (setf work new-work)))
+                 (when item
+                   (unless (gethash item *ps-packages*)
+                     (error "PS library not found"))
+                   (unless (gethash item stor)
+                     (push (getf (gethash item *ps-packages*) :ps-imports nil) new-work)
+                     (setf (gethash item stor) (gethash item *ps-packages*)))))
+               (setf work (apply #'append new-work))
+               (setf new-work nil)))
     stor))
 
 (defun get-all-node-requirements (&rest ps-packages)
   (apply #'append
-         (maphash (lambda (key val)
-                    (declare (ignore key))
-                    (getf val :npm-imports))
-                  (apply #'append (mapcar #'find-all-required-ps-packages ps-packages)))))
+         (maphash
+          (lambda (key pack)
+            (declare (ignore key))
+            (getf pack :npm-imports))
+          (apply #'find-all-required-ps-packages ps-packages))))
+
+(defun get-code-blocks (&rest ps-packages)
+  (maphash (lambda (key pack)
+             (declare (ignore key))
+             (getf pack :code))
+           (apply #'find-all-required-ps-packages ps-packages)))
 
 (defun strip-version-string (vstring)
   ;;FIXME: gadgets

@@ -32,21 +32,24 @@
 
 (defun write-readme (name location
                      &key
-                       (license "[specify license]")
-                       (description "[add a description]"))
+                       license
+                       description)
   (with-open-file (s (merge-pathnames location "README.md") :direction :output
                                                             :if-does-not-exist :create)
-    (format s "# ~:(~a~) ~%~% ~a ~%~% ### License ~%~% ~a ~&" name description license)))
+    (format s "# ~:(~a~) ~%~% ~a ~%~% ### License ~%~% ~a ~&"
+            name (or description "[add a description]") (or license "[specify license]"))))
 
 (defun write-build.sh (location filenames)
   (with-open-file (s (merge-pathnames location "build.sh") :direction :output :if-does-not-exist :create)
     (format s
             "#!/bin/sh
 
-~{node_modules/sigil-cli/sigil src/~a.parenscript --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" > ~:*~a.js~%~}
+cd src
+
+~{../node_modules/sigil-cli/sigil --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" ~a.parenscript > ../~:*~a.js~%~}
 
 #Add source files here
-#node_modules/sigil-cli/sigil src/your_file.parenscript  --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" > your_file.js~&" filenames)))
+# ../node_modules/sigil-cli/sigil --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" your_file.parenscript > ../your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
   (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
@@ -54,28 +57,27 @@
     (ensure-directories-exist path)
     (with-open-file (s path
                      :direction :output :if-does-not-exist :create)
-      ;;FIXME: add include for resources.lisp
       (format s ";;; ~a.parenscript~%~%(ps-load \"resources.parenscript\")" name))))
 
-(defun write-resources.lisp (location name code dependencies)
+(defun write-resources.parenscript (location name code dependencies)
   (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
                                     :name "resources.parenscript")
                      :direction :output :if-does-not-exist :create)
-    (format s ";;; Resources for ~a~%
-;;;
-(lisp
+    (format s ";;; Resources for ~a~%~%
+;;;~% (lisp
  (progn
    (ql:quickload 'paren6)
    (use-package :paren6 :ps)))
 
 ;;; Suggested import clauses for dependencies. Uncomment to use.
 
-~{;;; (import ((:default ~a)) ~:*)~%~}
+~{;;; (import ((:default ~a)) ~:*\"~a\")~%~}
 
 ;;; Code blocks from parenscript library dependencies: ~%
 ~{~a~&~}
 
-;;; " name dependencies code)))
+;;;
+" name dependencies code)))
 
 (defun write-nodelib-project-to-location (location name data &key license description main)
   (safe-to-write? location)
@@ -114,10 +116,11 @@
      :main main)
     ;;This writes to the package.json file created in step above
     (dolist (dep (append deps nodereqs))
-      (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))))
+      (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))
+    (write-resources.parenscript location name (get-code-blocks ps-dependencies) deps)))
 
 
-
+;;; JSON pretty printer
 
 (defun indent-newline (outstream depth indent)
   (write-char #\Newline outstream)
