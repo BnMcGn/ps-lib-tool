@@ -1,6 +1,6 @@
-;;;; cl-npm.lisp
+;;;; npm.lisp
 
-(in-package #:cl-npm)
+(in-package #:ps-lib-tool)
 
 ;;; "cl-npm" goes here. Hacks and cwdebuggingglory await!
 

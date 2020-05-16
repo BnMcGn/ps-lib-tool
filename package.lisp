@@ -1,7 +1,6 @@
 ;;;; package.lisp
 
-(defpackage #:cl-npm
-  (:nicknames #:npm)
+(defpackage #:ps-lib-tool
   (:use #:cl #:alexandria)
   (:export
    #:*executable-path*

@@ -1,6 +1,6 @@
 ;;;; ps-library
 
-(in-package #:cl-npm)
+(in-package #:ps-lib-tool)
 
 (defvar *ps-packages* (make-hash-table))
 

@@ -1,4 +1,4 @@
-(in-package #:cl-npm)
+(in-package #:ps-lib-tool)
 
 (defun handle-keyed-list (klist)
   (cond

@@ -1,7 +1,7 @@
-;;;; cl-npm.asd
+;;;; ps-lib-tool.asd
 
-(asdf:defsystem #:cl-npm
-  :description "A simple wrapper for npm and webpack."
+(asdf:defsystem #:ps-lib-tool
+  :description "Utilities for building parenscript libraries, including a project generator for parenscript-based node libraries."
   :author "Ben McGunigle <bnmcgn@gmail.com>"
   :license "MIT"
   :depends-on (#:uiop
