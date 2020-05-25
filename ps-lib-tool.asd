@@ -9,10 +9,13 @@
                #:cl-json
                #:gadgets
                #:alexandria
-               #:cl-semver)
+               #:cl-semver
+               #:parenscript
+               #:paren6)
   :serial t
   :components ((:file "package")
                (:file "npm")
                (:file "ps-library")
+               (:file "import-manager")
                (:file "nodelib")))
 

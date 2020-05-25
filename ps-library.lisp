@@ -4,22 +4,22 @@
 
 (defvar *ps-packages* (make-hash-table))
 
-(defun def-ps-package (name &key ps-imports npm-imports code export)
+(defun def-ps-package (name &key ps-imports js-imports code export)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
 
   (setf (gethash name *ps-packages*)
         (list
          :ps-imports ps-imports
-         :npm-imports (check-npm-imports npm-imports)
+         :js-imports (check-js-imports js-imports)
          :code code
          ;;FIXME: export might be obsolete. Use a node lib.
          :export export)))
 
-(defun check-npm-imports (imps)
+(defun check-js-imports (imps)
   (unless
       (every (lambda (x) (or (stringp x) (and (listp x) (every #'stringp x))))
              imps)
-    (error "Invalid item in npm-imports section"))
+    (error "Invalid item in js-imports section"))
   imps)
 
 (defun find-all-required-ps-packages (&rest required-syms)
@@ -40,12 +40,12 @@
                (setf new-work nil)))
     stor))
 
-(defun get-all-node-requirements (&rest ps-packages)
+(defun get-all-js-requirements (&rest ps-packages)
   (apply #'append
          (maphash
           (lambda (key pack)
             (declare (ignore key))
-            (getf pack :npm-imports))
+            (getf pack :js-imports))
           (apply #'find-all-required-ps-packages ps-packages))))
 
 (defun get-code-blocks (&rest ps-packages)
@@ -70,7 +70,7 @@
           ver1)
       ver2))
 
-(defun merge-node-requirements (reqs)
+(defun merge-js-requirements (reqs)
   "Requirements come in as a list with possible duplicates and/or different version specifications. Reduce to list of same first appearance order with highest requested version for each library."
   (let ((stor (make-hash-table :test #'equal))
         (accum))

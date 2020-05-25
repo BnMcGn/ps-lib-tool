@@ -96,7 +96,7 @@ cd src
                                 scripts dev-dependencies dependencies ps-dependencies keywords)
   (let ((name (or name (pathname-name location) (car (last (pathname-directory location)))))
         (nodereqs (get-all-node-requirements ps-dependencies))
-        (deps (check-npm-imports dependencies)))
+        (deps (check-ps-imports dependencies)))
     (write-nodelib-project-to-location
      location
      name
@@ -118,7 +118,6 @@ cd src
     (dolist (dep (append deps nodereqs))
       (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))
     (write-resources.parenscript location name (get-code-blocks ps-dependencies) deps)))
-
 
 ;;; JSON pretty printer
 

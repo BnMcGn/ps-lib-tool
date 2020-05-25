@@ -2,14 +2,14 @@
 
 (in-package #:ps-lib-tool)
 
-;;; "cl-npm" goes here. Hacks and cwdebuggingglory await!
+;;; "ps-lib-tool" goes here. Hacks and cwdebuggingglory await!
 
 ;;FIXME: These shouldn't be hard coded.
 (defvar *npm-executable-path* #p"/usr/bin/npm")
 (defvar *node-executable-path* #p"/usr/bin/nodejs")
 (defvar *browserify-path* #p"/usr/local/bin/browserify")
 (defvar *cache-path* (asdf:system-relative-pathname
-                      'cl-npm "cache" :type :directory))
+                      'ps-lib-tool "cache" :type :directory))
 
 
 (defun package-json-path (path)
