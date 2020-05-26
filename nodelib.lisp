@@ -95,8 +95,8 @@ cd src
 (defun make-node-lib (location &key name description version license repository main
                                 scripts dev-dependencies dependencies ps-dependencies keywords)
   (let ((name (or name (pathname-name location) (car (last (pathname-directory location)))))
-        (nodereqs (get-all-node-requirements ps-dependencies))
-        (deps (check-ps-imports dependencies)))
+        (nodereqs (get-all-js-requirements ps-dependencies))
+        (deps (check-js-imports dependencies)))
     (write-nodelib-project-to-location
      location
      name

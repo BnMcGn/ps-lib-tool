@@ -23,23 +23,17 @@
 (ps:defpsmacro libloc (&optional package)
   `(@ ,*import-manager-location* ,(or package *package*)))
 
-(setf
- (gethash 'import-ref ps::*macro-toplevel*)
- (gethash 'paren6:import ps::*macro-toplevel*))
-
-(ps:defpsmacro collect-imports (&body body)
-  (let ((symbols nil))
-    `(macrolet
-         ((paren6:import ((&rest names) module)
-            (setf symbols
-                  (append symbols
-                          (mapcar (lambda (itm) (if (listp itm) (second itm) itm)) names)))
-            `(import-ref ,names ,module)))
-       ,@body
-       (create6 ,@symbols))))
+(defun collect-names (code)
+  (let ((names nil))
+    (dolist (itm code)
+      (when (and (listp itm) (eq 'paren6:import (car itm)))
+        (dolist (name (second itm))
+          (push (if (listp name) (second name) name) names))))
+    (nreverse names)))
 
 (ps:defpsmacro manage-imports (&body body)
-  `(setf
-    (libloc)
-    (collect-imports
-     ,@body)))
+  `(progn
+     ,@body
+     (setf
+      (libloc)
+      (create6 ,@(collect-names body)))))
