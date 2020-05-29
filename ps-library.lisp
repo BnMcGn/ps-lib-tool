@@ -10,23 +10,23 @@
   `(progn
      (gadgets:eval-always
        (ps:defpsmacro ,(gadgets:symbolize :lib :package pname) (name &optional package)
-         `(ps:@ ,*import-manager-location* (or package ,,`',pname) ,name))
+         (macro-body 'ps:@ ',pname package (list name)))
 
-       (ps:defpsmacro ,(gadgets:symbolize :chainl :package pname) (name &rest params)
-         `(ps:chain (,,(gadgets:symbolize :lib :package pname) ,name) ,@params))
-
-       (ps:defpsmacro ,(gadgets:symbolize :libloc :package pname) (&optional package)
-         `(ps:@ ,*import-manager-location* (or package ,,`',pname)))
+       (ps:defpsmacro ,(gadgets:symbolize :chainl :package pname) (&rest params)
+         (macro-body 'ps:chain ',pname nil params))
 
        (ps:defpsmacro manage-imports (&body body)
          `(progn
             ,@body
             (setf
-             (,(gadgets:symbolize :libloc :package pname))
+             ,(macro-body 'ps:@ ',pname nil nil)
              (paren6:create6 ,@(collect-names body))))))
 
      (save-ps-package ',pname
                       :ps-imports ,ps-imports :js-imports ,js-imports :code ,code :export ,export)))
+
+(defun macro-body (command package-name alt-package rest)
+  `(,command ,*import-manager-location* ',(or alt-package package-name) ,@rest))
 
 (defun collect-names (code)
   (let ((names nil))
