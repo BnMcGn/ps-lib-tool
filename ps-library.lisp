@@ -2,11 +2,41 @@
 
 (in-package #:ps-lib-tool)
 
-(defvar *ps-packages* (make-hash-table))
+(defvar *ps-packages* (make-hash-table :test 'string-equal))
 
-(defun def-ps-package (name &key ps-imports js-imports code export)
+(defmacro def-ps-package (pname &key ps-imports js-imports code export)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
+  (declare (symbol pname))
+  `(progn
+     (gadgets:eval-always
+       (ps:defpsmacro ,(gadgets:symbolize :lib :package pname) (name &optional package)
+         `(ps:@ ,*import-manager-location* (or package ,,`',pname) ,name))
 
+       (ps:defpsmacro ,(gadgets:symbolize :chainl :package pname) (name &rest params)
+         `(ps:chain (,,(gadgets:symbolize :lib :package pname) ,name) ,@params))
+
+       (ps:defpsmacro ,(gadgets:symbolize :libloc :package pname) (&optional package)
+         `(ps:@ ,*import-manager-location* (or package ,,`',pname)))
+
+       (ps:defpsmacro manage-imports (&body body)
+         `(progn
+            ,@body
+            (setf
+             (,(gadgets:symbolize :libloc :package pname))
+             (paren6:create6 ,@(collect-names body))))))
+
+     (save-ps-package ',pname
+                      :ps-imports ,ps-imports :js-imports ,js-imports :code ,code :export ,export)))
+
+(defun collect-names (code)
+  (let ((names nil))
+    (dolist (itm code)
+      (when (and (listp itm) (eq 'paren6:import (car itm)))
+        (dolist (name (second itm))
+          (push (if (listp name) (second name) name) names))))
+    (nreverse names)))
+
+(defun save-ps-package (name &key ps-imports js-imports code export)
   (setf (gethash name *ps-packages*)
         (list
          :ps-imports ps-imports

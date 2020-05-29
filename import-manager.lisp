@@ -15,25 +15,18 @@
 (defparameter *import-manager-location* '_ps_lib_modules)
 
 (ps:defpsmacro lib (name &optional package)
-  `(@ ,*import-manager-location* ,(or package *package*) ,name))
+  `(ps:@ ,*import-manager-location* ,(or package *package*) ,name))
 
 (ps:defpsmacro chainl (name &rest params)
-  `(chain (lib ,name) ,@params))
+  `(ps:chain (lib ,name) ,@params))
 
 (ps:defpsmacro libloc (&optional package)
-  `(@ ,*import-manager-location* ,(or package *package*)))
-
-(defun collect-names (code)
-  (let ((names nil))
-    (dolist (itm code)
-      (when (and (listp itm) (eq 'paren6:import (car itm)))
-        (dolist (name (second itm))
-          (push (if (listp name) (second name) name) names))))
-    (nreverse names)))
+  `(ps:@ ,*import-manager-location* ,(or package (lisp *package*))))
 
 (ps:defpsmacro manage-imports (&body body)
-  `(progn
-     ,@body
-     (setf
-      (libloc)
-      (create6 ,@(collect-names body)))))
+           `(progn
+              ,@body
+              (setf
+               (libloc)
+               (paren6:create6 ,@(collect-names body)))))
+

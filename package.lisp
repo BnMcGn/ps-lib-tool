@@ -13,5 +13,6 @@
    #:npm-version
    #:webpack
    #:installed?
-   #:make-node-lib))
+   #:make-node-lib
+   #:def-ps-package))
 
