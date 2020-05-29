@@ -2,7 +2,7 @@
 
 (in-package #:ps-lib-tool)
 
-(defvar *ps-packages* (make-hash-table :test 'string-equal))
+(defvar *ps-packages* (make-hash-table :test 'eq))
 
 (defmacro def-ps-package (pname &key ps-imports js-imports code export)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
@@ -37,7 +37,7 @@
     (nreverse names)))
 
 (defun save-ps-package (name &key ps-imports js-imports code export)
-  (setf (gethash name *ps-packages*)
+  (setf (gethash (gadgets:keywordize name) *ps-packages*)
         (list
          :ps-imports ps-imports
          :js-imports (check-js-imports js-imports)
@@ -52,21 +52,27 @@
     (error "Invalid item in js-imports section"))
   imps)
 
+(defun system-loaded-p (sys)
+  (member sys))
+
 (defun find-all-required-ps-packages (&rest required-syms)
   "Recursively find all of the ps-packages that will be needed by the specified package(s). Will NOT search for packages in the depends-on section of .asd files. Dependencies must be explicitly stated in the ps-imports section of the def-ps-package form. Includes requiring packages."
   (let ((stor (make-hash-table))
-        (work required-syms)
+        (work (mapcar #'gadgets:keywordize required-syms))
         (new-work nil))
     (loop while work
           do (progn
                (dolist (item work)
                  (when item
-                   (unless (gethash item *ps-packages*)
+                   ;; Requested ps-packages might not (yet) have a ps-package declaration
+                   (unless (or (gethash item *ps-packages*)
+                               (member item (asdf:already-loaded-systems)
+                                       :test #'gadgets:string-equal-caseless))
                      (error "PS library not found"))
                    (unless (gethash item stor)
                      (push (getf (gethash item *ps-packages*) :ps-imports nil) new-work)
                      (setf (gethash item stor) (gethash item *ps-packages*)))))
-               (setf work (apply #'append new-work))
+               (setf work (mapcar #'gadgets:keywordize (apply #'append new-work)))
                (setf new-work nil)))
     stor))
 

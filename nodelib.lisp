@@ -117,7 +117,7 @@ cd src
     ;;This writes to the package.json file created in step above
     (dolist (dep (append deps nodereqs))
       (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))
-    (write-resources.parenscript location name (get-code-blocks ps-dependencies) deps)))
+    (write-resources.parenscript location name (apply #'get-code-blocks ps-dependencies) deps)))
 
 ;;; JSON pretty printer
 
