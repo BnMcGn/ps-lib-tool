@@ -15,7 +15,7 @@
        (ps:defpsmacro ,(gadgets:symbolize :chainl :package pname) (&rest params)
          (macro-body 'ps:chain ',pname nil params))
 
-       (ps:defpsmacro manage-imports (&body body)
+       (ps:defpsmacro ,(gadgets:symbolize :manage-imports :package pname) (&body body)
          `(progn
             ,@body
             (setf
@@ -77,21 +77,23 @@
     stor))
 
 (defun get-all-js-requirements (&rest ps-packages)
-  (apply #'append
-         (maphash
-          (lambda (key pack)
-            (declare (ignore key))
-            (getf pack :js-imports))
-          (apply #'find-all-required-ps-packages ps-packages))))
+  (let ((accum nil))
+    (maphash
+     (lambda (key pack)
+       (declare (ignore key))
+       (push (getf pack :js-imports) accum))
+     (apply #'find-all-required-ps-packages ps-packages))
+    (apply #'append (nreverse accum))))
 
 (defun get-code-blocks (&rest ps-packages)
-  (maphash (lambda (key pack)
-             (declare (ignore key))
-             (getf pack :code))
-           (apply #'find-all-required-ps-packages ps-packages)))
+  (let ((accum nil))
+    (maphash (lambda (key pack)
+              (declare (ignore key))
+              (push (getf pack :code) accum))
+             (apply #'find-all-required-ps-packages ps-packages))
+    (nreverse accum)))
 
 (defun strip-version-string (vstring)
-  ;;FIXME: gadgets
   (nth-value 1 (gadgets:divide-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
                                        vstring)))
 
