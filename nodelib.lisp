@@ -46,10 +46,10 @@
 
 cd src
 
-~{../node_modules/sigil-cli/sigil --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" ~a.parenscript > ../~:*~a.js~%~}
+~{../node_modules/sigil-cli/sigil ~a.parenscript > ../~:*~a.js~%~}
 
 #Add source files here
-# ../node_modules/sigil-cli/sigil --eval \"(progn (ql:quickload 'nodelib-util) (use-package :nodelib-util))\" your_file.parenscript > ../your_file.js~&" filenames)))
+# ../node_modules/sigil-cli/sigil your_file.parenscript > ../your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
   (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
@@ -57,7 +57,7 @@ cd src
     (ensure-directories-exist path)
     (with-open-file (s path
                      :direction :output :if-does-not-exist :create)
-      (format s ";;; ~a.parenscript~%~%(ps-load \"resources.parenscript\")" name))))
+      (format s ";;; ~a.parenscript~%~%(load \"resources.parenscript\")" name))))
 
 ;;;FIXME: Rebuilding the resources file must be externally available.
 (defun write-resources.parenscript (location name code dependencies)
