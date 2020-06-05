@@ -59,6 +59,7 @@ cd src
                      :direction :output :if-does-not-exist :create)
       (format s ";;; ~a.parenscript~%~%(ps-load \"resources.parenscript\")" name))))
 
+;;;FIXME: Rebuilding the resources file must be externally available.
 (defun write-resources.parenscript (location name code dependencies)
   (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
                                     :name "resources.parenscript")
@@ -66,18 +67,19 @@ cd src
     (format s ";;; Resources for ~a~%~%
 ;;;~% (lisp
  (progn
-   (ql:quickload 'paren6)
+   (ql:quickload \"paren6\")
    (use-package :paren6 :ps)))
 
 ;;; Suggested import clauses for dependencies. Uncomment to use.
 
 ~{;;; (import ((:default ~a)) ~:*\"~a\")~%~}
 
-;;; Code blocks from parenscript library dependencies: ~%
-~{~a~&~}
+;;; Execute code blocks from parenscript library dependencies: ~%
+
+~s
 
 ;;;
-" name dependencies code)))
+" name dependencies (apply #'get-bootstrap-code code))))
 
 (defun write-nodelib-project-to-location (location name data &key license description main)
   (safe-to-write? location)
@@ -117,7 +119,8 @@ cd src
     ;;This writes to the package.json file created in step above
     (dolist (dep (append deps nodereqs))
       (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))
-    (write-resources.parenscript location name (apply #'get-code-blocks ps-dependencies) deps)))
+    (write-resources.parenscript
+     location name (mapcar #'gadgets:keywordize ps-dependencies) deps)))
 
 ;;; JSON pretty printer
 

@@ -23,7 +23,7 @@
              (paren6:create6 ,@(collect-names body))))))
 
      (save-ps-package ',pname
-                      :ps-imports ,ps-imports :js-imports ,js-imports :code ,code :export ,export)))
+                      :ps-imports ,ps-imports :js-imports ,js-imports :code ',code :export ,export)))
 
 (defun macro-body (command package-name alt-package rest)
   `(,command ,*import-manager-location* ',(or alt-package package-name) ,@rest))
@@ -92,6 +92,13 @@
               (push (getf pack :code) accum))
              (apply #'find-all-required-ps-packages ps-packages))
     (nreverse accum)))
+
+(defun get-bootstrap-code (&rest ps-packages)
+  (cons
+   'progn
+   ;;Strip out (ps ) wrappers
+   (mapcar (lambda (code) (if (eq (car code) 'ps:ps) (cdr code) code))
+           (apply #'get-code-blocks ps-packages))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:divide-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))

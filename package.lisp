@@ -14,5 +14,6 @@
    #:webpack
    #:installed?
    #:make-node-lib
-   #:def-ps-package))
+   #:def-ps-package
+   #:get-bootstrap-code))
 
