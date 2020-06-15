@@ -14,19 +14,11 @@
 
 (defparameter *import-manager-location* '_ps_lib_modules)
 
-(ps:defpsmacro lib (name &optional package)
-  `(ps:@ ,*import-manager-location* ,(or package *package*) ,name))
+(ps:defpsmacro @l (package &rest params)
+  `(ps:@ ,*import-manager-location* ,package ,@params))
 
-(ps:defpsmacro chainl (name &rest params)
-  `(ps:chain (lib ,name) ,@params))
+(ps:defpsmacro chainl (package name &rest params)
+  `(ps:chain (@l ,package) ,@params))
 
-(ps:defpsmacro libloc (&optional package)
-  `(ps:@ ,*import-manager-location* ,(or package (lisp *package*))))
 
-(ps:defpsmacro manage-imports (&body body)
-           `(progn
-              ,@body
-              (setf
-               (libloc)
-               (paren6:create6 ,@(collect-names body)))))
 

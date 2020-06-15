@@ -8,25 +8,8 @@
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
   (declare (symbol pname))
   `(progn
-     (gadgets:eval-always
-       (ps:defpsmacro ,(gadgets:symbolize :lib :package pname) (name &optional package)
-         (macro-body 'ps:@ ',pname package (list name)))
-
-       (ps:defpsmacro ,(gadgets:symbolize :chainl :package pname) (&rest params)
-         (macro-body 'ps:chain ',pname nil params))
-
-       (ps:defpsmacro ,(gadgets:symbolize :manage-imports :package pname) (&body body)
-         `(progn
-            ,@body
-            (setf
-             ,(macro-body 'ps:@ ',pname nil nil)
-             (paren6:create6 ,@(collect-names body))))))
-
      (save-ps-package ',pname
                       :ps-imports ,ps-imports :js-imports ,js-imports :code ',code :export ,export)))
-
-(defun macro-body (command package-name alt-package rest)
-  `(,command ,*import-manager-location* ',(or alt-package package-name) ,@rest))
 
 (defun collect-names (code)
   (let ((names nil))
