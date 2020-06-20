@@ -46,10 +46,10 @@
 
 cd src
 
-~{../node_modules/sigil-cli/sigil ~a.parenscript > ../~:*~a.js~%~}
+~{../node_modules/sigil-cli/sigil --eval \"(ql:quickload \\\"ps-lib-tool\\\")\" ~a.parenscript > ../~:*~a.js~%~}
 
 #Add source files here
-# ../node_modules/sigil-cli/sigil your_file.parenscript > ../your_file.js~&" filenames)))
+# ../node_modules/sigil-cli/sigil --eval \"(ql:quickload \\\"ps-lib-tool\\\")\" your_file.parenscript > ../your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
   (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
@@ -60,15 +60,17 @@ cd src
       (format s ";;; ~a.parenscript~%~%(load \"resources.parenscript\")" name))))
 
 ;;;FIXME: Rebuilding the resources file must be externally available.
-(defun write-resources.parenscript (location name code dependencies)
+(defun write-resources.parenscript (location name ps-dependencies dependencies)
   (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
                                     :name "resources.parenscript")
                      :direction :output :if-does-not-exist :create)
     (format s ";;; Resources for ~a~%~%
 ;;;~% (lisp
  (progn
-   (ql:quickload \"paren6\")
-   (use-package :paren6 :ps)))
+   (ql:quickload \"paren6\" :silent t)
+   (use-package :paren6 :ps)
+   (ql:quickload \"ps-lib-tool\" :silent t)
+~{~&   (ql:quickload \"~a\" :silent t)~}))
 
 ;;; Suggested import clauses for dependencies. Uncomment to use.
 
@@ -79,7 +81,10 @@ cd src
 ~s
 
 ;;;
-" name dependencies (apply #'get-bootstrap-code code))))
+"
+            name
+            (mapcar (alexandria:compose #'gadgets:to-lowercase #'symbol-name) ps-dependencies)
+            dependencies (apply #'get-bootstrap-code ps-dependencies))))
 
 (defun write-nodelib-project-to-location (location name data &key license description main)
   (safe-to-write? location)

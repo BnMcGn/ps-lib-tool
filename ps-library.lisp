@@ -35,8 +35,15 @@
     (error "Invalid item in js-imports section"))
   imps)
 
-(defun system-loaded-p (sys)
-  (member sys))
+(defun ensure-system-loaded (system)
+  "If the system exists and isn't loaded, load it."
+  (or
+   (member system (asdf:already-loaded-systems) :test #'gadgets:string-equal-caseless)
+   (handler-case
+       (progn
+         (asdf:find-system system)
+         (ql:quickload system))
+     (asdf:missing-component (mc) (declare (ignore mc)) nil))))
 
 (defun find-all-required-ps-packages (&rest required-syms)
   "Recursively find all of the ps-packages that will be needed by the specified package(s). Will NOT search for packages in the depends-on section of .asd files. Dependencies must be explicitly stated in the ps-imports section of the def-ps-package form. Includes requiring packages."
@@ -49,8 +56,7 @@
                  (when item
                    ;; Requested ps-packages might not (yet) have a ps-package declaration
                    (unless (or (gethash item *ps-packages*)
-                               (member item (asdf:already-loaded-systems)
-                                       :test #'gadgets:string-equal-caseless))
+                               (ensure-system-loaded item))
                      (error "PS library not found"))
                    (unless (gethash item stor)
                      (push (getf (gethash item *ps-packages*) :ps-imports nil) new-work)
@@ -80,8 +86,10 @@
   (cons
    'progn
    ;;Strip out (ps ) wrappers
-   (mapcar (lambda (code) (if (eq (car code) 'ps:ps) (cdr code) code))
-           (apply #'get-code-blocks ps-packages))))
+   (gadgets:flatten-1
+    (mapcar (lambda (code)
+              (if (eq (car code) 'ps:ps) (cdr code) (list code)))
+            (remove-if-not #'identity (apply #'get-code-blocks ps-packages))))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:divide-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
