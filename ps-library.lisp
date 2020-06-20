@@ -4,27 +4,20 @@
 
 (defvar *ps-packages* (make-hash-table :test 'eq))
 
-(defmacro def-ps-package (pname &key ps-imports js-imports code export)
+(defmacro def-ps-package (pname &key ps-imports js-imports init-code export)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
   (declare (symbol pname))
   `(progn
      (save-ps-package ',pname
-                      :ps-imports ,ps-imports :js-imports ,js-imports :code ',code :export ,export)))
+                      :ps-imports ,ps-imports :js-imports ,js-imports :init-code ',init-code
+                      :export ,export)))
 
-(defun collect-names (code)
-  (let ((names nil))
-    (dolist (itm code)
-      (when (and (listp itm) (eq 'paren6:import (car itm)))
-        (dolist (name (second itm))
-          (push (if (listp name) (second name) name) names))))
-    (nreverse names)))
-
-(defun save-ps-package (name &key ps-imports js-imports code export)
+(defun save-ps-package (name &key ps-imports js-imports init-code export)
   (setf (gethash (gadgets:keywordize name) *ps-packages*)
         (list
          :ps-imports ps-imports
          :js-imports (check-js-imports js-imports)
-         :code code
+         :init-code init-code
          ;;FIXME: export might be obsolete. Use a node lib.
          :export export)))
 
@@ -74,22 +67,22 @@
      (apply #'find-all-required-ps-packages ps-packages))
     (apply #'append (nreverse accum))))
 
-(defun get-code-blocks (&rest ps-packages)
+(defun get-init-code-blocks (&rest ps-packages)
   (let ((accum nil))
     (maphash (lambda (key pack)
               (declare (ignore key))
-              (push (getf pack :code) accum))
+              (push (getf pack :init-code) accum))
              (apply #'find-all-required-ps-packages ps-packages))
     (nreverse accum)))
 
-(defun get-bootstrap-code (&rest ps-packages)
+(defun get-init-code (&rest ps-packages)
   (cons
    'progn
    ;;Strip out (ps ) wrappers
    (gadgets:flatten-1
     (mapcar (lambda (code)
               (if (eq (car code) 'ps:ps) (cdr code) (list code)))
-            (remove-if-not #'identity (apply #'get-code-blocks ps-packages))))))
+            (remove-if-not #'identity (apply #'get-init-code-blocks ps-packages))))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:divide-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))

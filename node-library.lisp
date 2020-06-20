@@ -46,10 +46,10 @@
 
 cd src
 
-~{../node_modules/sigil-cli/sigil --eval \"(ql:quickload \\\"ps-lib-tool\\\")\" ~a.parenscript > ../~:*~a.js~%~}
+~{../node_modules/sigil-cli/sigil ~a.parenscript > ../~:*~a.js~%~}
 
 #Add source files here
-# ../node_modules/sigil-cli/sigil --eval \"(ql:quickload \\\"ps-lib-tool\\\")\" your_file.parenscript > ../your_file.js~&" filenames)))
+# ../node_modules/sigil-cli/sigil your_file.parenscript > ../your_file.js~&" filenames)))
 
 (defun write-sourcefile (location name)
   (let ((path (make-pathname :directory (append (pathname-directory location) '("src"))
@@ -57,20 +57,31 @@ cd src
     (ensure-directories-exist path)
     (with-open-file (s path
                      :direction :output :if-does-not-exist :create)
-      (format s ";;; ~a.parenscript~%~%(load \"resources.parenscript\")" name))))
+      (format s ";;; ~a.parenscript~%~%(load \"resource-loader.parenscript\")
+(load \"resources.parenscript\")" name))))
 
 ;;;FIXME: Rebuilding the resources file must be externally available.
+;;;FIXME: Would prefer to have just one resource file, or prehaps an .asd file instead of the
+;;; loader file.
 (defun write-resources.parenscript (location name ps-dependencies dependencies)
   (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
-                                    :name "resources.parenscript")
+                                    :name "resource-loader.parenscript")
                      :direction :output :if-does-not-exist :create)
-    (format s ";;; Resources for ~a~%~%
+    (format s ";;; Resource loader for ~a~%~%
 ;;;~% (lisp
  (progn
    (ql:quickload \"paren6\" :silent t)
    (use-package :paren6 :ps)
    (ql:quickload \"ps-lib-tool\" :silent t)
-~{~&   (ql:quickload \"~a\" :silent t)~}))
+~{~&   (ql:quickload \"~a\" :silent t)~}
+   nil))
+"
+            name
+            (mapcar (alexandria:compose #'gadgets:to-lowercase #'symbol-name) ps-dependencies)))
+  (with-open-file (s (make-pathname :directory (append (pathname-directory location) '("src"))
+                                    :name "resources.parenscript")
+                     :direction :output :if-does-not-exist :create)
+    (format s ";;; Resources for ~a~%~%
 
 ;;; Suggested import clauses for dependencies. Uncomment to use.
 
@@ -83,8 +94,7 @@ cd src
 ;;;
 "
             name
-            (mapcar (alexandria:compose #'gadgets:to-lowercase #'symbol-name) ps-dependencies)
-            dependencies (apply #'get-bootstrap-code ps-dependencies))))
+            dependencies (apply #'get-init-code ps-dependencies))))
 
 (defun write-nodelib-project-to-location (location name data &key license description main)
   (safe-to-write? location)

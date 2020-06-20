@@ -15,7 +15,7 @@
    #:installed?
    #:make-node-lib
    #:def-ps-package
-   #:get-bootstrap-code
+   #:get-init-code
    #:@l
    #:chainl))
 

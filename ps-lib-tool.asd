@@ -17,5 +17,5 @@
                (:file "npm")
                (:file "ps-library")
                (:file "import-manager")
-               (:file "nodelib")))
+               (:file "node-library")))
 
