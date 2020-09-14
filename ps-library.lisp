@@ -31,7 +31,7 @@
 (defun ensure-system-loaded (system)
   "If the system exists and isn't loaded, load it."
   (or
-   (member system (asdf:already-loaded-systems) :test #'gadgets:string-equal-caseless)
+   (member system (asdf:already-loaded-systems) :test #'string-equal)
    (handler-case
        (progn
          (asdf:find-system system)
@@ -85,7 +85,7 @@
             (remove-if-not #'identity (apply #'get-init-code-blocks ps-packages))))))
 
 (defun strip-version-string (vstring)
-  (nth-value 1 (gadgets:divide-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
+  (nth-value 1 (gadgets:part-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
                                        vstring)))
 
 (defun compare-versions (ver1 ver2)
