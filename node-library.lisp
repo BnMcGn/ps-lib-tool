@@ -110,8 +110,10 @@ cd src
       (pretty-print-json s out))))
 
 (defun make-node-lib (location &key name description version license repository main
-                                scripts dev-dependencies dependencies ps-dependencies keywords)
-  (let ((name (or name (pathname-name location) (car (last (pathname-directory location)))))
+                                 scripts dev-dependencies dependencies ps-dependencies keywords)
+  (when (pathname-name location)
+    (error "Library location must be a directory"))
+  (let ((name (car (last (pathname-directory location))))
         (nodereqs (apply #'get-all-js-requirements ps-dependencies))
         (deps (check-js-imports dependencies)))
     (write-nodelib-project-to-location
@@ -126,7 +128,7 @@ cd src
       :repository repository
       :scripts (list* "build" "sh build.sh" scripts)
       :dev-dependencies
-      (list* "sigil-cli" "^1.0.6" dev-dependencies)
+      (list* "sigil-cli" "^1.1.0" dev-dependencies)
       :keywords keywords)
      :license license
      :description description
@@ -135,7 +137,7 @@ cd src
     (dolist (dep (append deps nodereqs))
       (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))
     (write-resources.parenscript
-     location name (mapcar #'gadgets:keywordize ps-dependencies) deps)))
+     location name (mapcar #'proto:keywordize ps-dependencies) deps)))
 
 ;;; JSON pretty printer
 
