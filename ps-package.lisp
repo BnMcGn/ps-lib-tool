@@ -1,4 +1,4 @@
-;;;; ps-library
+;;;; ps-package
 
 (in-package #:ps-lib-tool)
 

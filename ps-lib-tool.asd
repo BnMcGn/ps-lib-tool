@@ -15,7 +15,7 @@
   :serial t
   :components ((:file "package")
                (:file "npm")
-               (:file "ps-library")
+               (:file "ps-package")
                (:file "import-manager")
                (:file "node-library")))
 
