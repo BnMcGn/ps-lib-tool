@@ -10,6 +10,7 @@
                #:gadgets
                #:alexandria
                #:cl-semver
+               #:split-sequence
                #:parenscript
                #:paren6)
   :serial t

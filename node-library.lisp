@@ -137,7 +137,8 @@ cd src
     (dolist (dep (append deps nodereqs))
       (install-save location (if (listp dep) (car dep) dep) :version (when (listp dep) (second dep))))
     (write-resources.parenscript
-     location name (mapcar #'proto:keywordize ps-dependencies) deps)))
+     location name (mapcar (alexandria:compose #'alexandria:make-keyword #'gadgets:to-uppercase)
+                           ps-dependencies) deps)))
 
 ;;; JSON pretty printer
 
