@@ -4,28 +4,28 @@
 
 (defvar *ps-packages* (make-hash-table :test 'eq))
 
-(defmacro def-ps-package (pname &key ps-imports js-imports init-code export)
+(defmacro def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
   (declare (symbol pname))
   `(progn
      (save-ps-package ',pname
-                      :ps-imports ,ps-imports :js-imports ,js-imports :init-code ',init-code
+                      :ps-requirements ,ps-requirements :js-requirements ,js-requirements :init-code ',init-code
                       :export ,export)))
 
-(defun save-ps-package (name &key ps-imports js-imports init-code export)
+(defun save-ps-package (name &key ps-requirements js-requirements init-code export)
   (setf (gethash (alexandria:make-keyword (gadgets:to-uppercase name)) *ps-packages*)
         (list
-         :ps-imports ps-imports
-         :js-imports (check-js-imports js-imports)
+         :ps-requirements ps-requirements
+         :js-requirements (check-js-requirements js-requirements)
          :init-code init-code
          ;;FIXME: export might be obsolete. Use a node lib.
          :export export)))
 
-(defun check-js-imports (imps)
+(defun check-js-requirements (imps)
   (unless
       (every (lambda (x) (or (stringp x) (and (listp x) (every #'stringp x))))
              imps)
-    (error "Invalid item in js-imports section"))
+    (error "Invalid item in js-requirements section"))
   imps)
 
 (defun ensure-system-loaded (system)
@@ -39,7 +39,7 @@
      (asdf:missing-component (mc) (declare (ignore mc)) nil))))
 
 (defun find-all-required-ps-packages (&rest required-syms)
-  "Recursively find all of the ps-packages that will be needed by the specified package(s). Will NOT search for packages in the depends-on section of .asd files. Dependencies must be explicitly stated in the ps-imports section of the def-ps-package form. Includes requiring packages."
+  "Recursively find all of the ps-packages that will be needed by the specified package(s). Will NOT search for packages in the depends-on section of .asd files. Dependencies must be explicitly stated in the ps-requirements section of the def-ps-package form. Includes requiring packages."
   (let ((stor (make-hash-table))
         (work (mapcar (alexandria:compose #'alexandria:make-keyword #'gadgets:to-uppercase)
                       required-syms))
@@ -53,7 +53,7 @@
                                (ensure-system-loaded item))
                      (error "PS library not found"))
                    (unless (gethash item stor)
-                     (push (getf (gethash item *ps-packages*) :ps-imports nil) new-work)
+                     (push (getf (gethash item *ps-packages*) :ps-requirements nil) new-work)
                      (setf (gethash item stor) (gethash item *ps-packages*)))))
                (setf work (mapcar (alexandria:compose #'alexandria:make-keyword #'gadgets:to-uppercase)
                                   (apply #'append new-work)))
@@ -65,7 +65,7 @@
     (maphash
      (lambda (key pack)
        (declare (ignore key))
-       (push (getf pack :js-imports) accum))
+       (push (getf pack :js-requirements) accum))
      (apply #'find-all-required-ps-packages ps-packages))
     (apply #'append (nreverse accum))))
 

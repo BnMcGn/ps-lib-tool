@@ -47,15 +47,15 @@ The import-into macro from paren6 acts like import, but binds the specified name
 
 This is plainly not as safe as a gensym. You can obviously do `(@l :other-package ...)`. Don't do that! Why, you ask, are we not using a gensym? We don't want to run the import code for each expansion of every macro in the package. One import for the package will do just fine.
 
-## :ps-imports
+## :ps-requirements
 
-The :ps-imports field of def-ps-package is a list of symbols specifying other ps-packages that are needed and whose dependencies should be included. The ASDF system in which your def-ps-package resides should have already loaded the systems which contain these other ps-packages. Make sure to add the appropriate items to your .asd file.
+The :ps-requirements field of def-ps-package is a list of symbols specifying other ps-packages that are needed and whose dependencies should be included. The ASDF system in which your def-ps-package resides should have already loaded the systems which contain these other ps-packages. Make sure to add the appropriate items to your .asd file.
 
-## :js-imports
+## :js-requirements
 
 This section specifies Node/js requirements. It is a list. Each member of the list can be a string containing the name of the library or a list containing the namestring and a version specifier. Example:
 
-    > :js-imports
+    > :js-requirements
     > '("library-a"
     >   ("library-b" "1.2.3"))
 

@@ -115,7 +115,7 @@ cd src
     (error "Library location must be a directory"))
   (let ((name (car (last (pathname-directory location))))
         (nodereqs (apply #'get-all-js-requirements ps-dependencies))
-        (deps (check-js-imports dependencies)))
+        (deps (check-js-requirements dependencies)))
     (write-nodelib-project-to-location
      location
      name
