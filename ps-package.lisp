@@ -4,22 +4,23 @@
 
 (defvar *ps-packages* (make-hash-table :test 'eq))
 
-(defmacro def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files)
+(defun def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
   (declare (symbol pname))
-  `(progn
-     (save-ps-package ',pname
-                      :ps-requirements ,ps-requirements :js-requirements ,js-requirements :init-code ',init-code
-                      :export ,export)))
+  (save-ps-package
+   :ps-requirements ps-requirements :js-requirements js-requirements :init-code init-code
+   :export export :code code :ps-files ps-files))
 
-(defun save-ps-package (name &key ps-requirements js-requirements init-code export)
+(defun save-ps-package (name &key ps-requirements js-requirements init-code export code ps-files)
   (setf (gethash (alexandria:make-keyword (gadgets:to-uppercase name)) *ps-packages*)
         (list
          :ps-requirements ps-requirements
          :js-requirements (check-js-requirements js-requirements)
          :init-code init-code
          ;;FIXME: export might be obsolete. Use a node lib.
-         :export export)))
+         :export export
+         :code code
+         :ps-files (check-ps-files ps-files))))
 
 (defun check-js-requirements (imps)
   (unless
@@ -27,6 +28,11 @@
              imps)
     (error "Invalid item in js-requirements section"))
   imps)
+
+(defun check-ps-files (files)
+  (when (notevery #'probe-file files)
+    (error "Can't find specified ps-file"))
+  files)
 
 (defun ensure-system-loaded (system)
   "If the system exists and isn't loaded, load it."
@@ -85,6 +91,12 @@
     (mapcar (lambda (code)
               (if (eq (car code) 'ps:ps) (cdr code) (list code)))
             (remove-if-not #'identity (apply #'get-init-code-blocks ps-packages))))))
+
+(defun get-code (ps-package)
+  (let* ((pack (gethash ps-package *ps-packages*))
+         (code (or (getf pack :code) ""))
+         (codes (mapcar #'ps:ps-compile-file (getf pack :ps-files))))
+    (apply #'concatenate 'string code (remove-if-not (lambda (x) x) codes))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:part-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))

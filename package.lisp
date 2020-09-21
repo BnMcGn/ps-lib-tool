@@ -17,5 +17,6 @@
    #:def-ps-package
    #:get-init-code
    #:@l
-   #:chainl))
+   #:chainl
+   #:get-code))
 
