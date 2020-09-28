@@ -17,8 +17,8 @@
 (ps:defpsmacro @l (package &rest params)
   `(ps:@ ,*import-manager-location* ,package ,@params))
 
-(ps:defpsmacro chainl (package name &rest params)
-  `(ps:chain (@l ,package) ,@params))
+(ps:defpsmacro chainl (package &rest params)
+  `(ps:chain ,*import-manager-location* ,package ,@params))
 
 
 

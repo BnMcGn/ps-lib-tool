@@ -4,15 +4,19 @@
 
 (defvar *ps-packages* (make-hash-table :test 'eq))
 
-(defun def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files)
+(defmacro def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
   (declare (symbol pname))
-  (save-ps-package
-   :ps-requirements ps-requirements :js-requirements js-requirements :init-code init-code
-   :export export :code code :ps-files ps-files))
+  `(save-ps-package
+    ',pname
+    :ps-requirements ,ps-requirements :js-requirements ,js-requirements :init-code ',init-code
+    :export ,export :code ,code :ps-files ,ps-files))
+
+(defmacro get-package (name)
+  `(gethash (alexandria:make-keyword (gadgets:to-uppercase ,name)) *ps-packages*))
 
 (defun save-ps-package (name &key ps-requirements js-requirements init-code export code ps-files)
-  (setf (gethash (alexandria:make-keyword (gadgets:to-uppercase name)) *ps-packages*)
+  (setf (get-package name)
         (list
          :ps-requirements ps-requirements
          :js-requirements (check-js-requirements js-requirements)
@@ -93,10 +97,15 @@
             (remove-if-not #'identity (apply #'get-init-code-blocks ps-packages))))))
 
 (defun get-code (ps-package)
-  (let* ((pack (gethash ps-package *ps-packages*))
+  (let* ((pack (or (get-package ps-package)
+                   (error "PS package not found")))
          (code (or (getf pack :code) ""))
-         (codes (mapcar #'ps:ps-compile-file (getf pack :ps-files))))
-    (apply #'concatenate 'string code (remove-if-not (lambda (x) x) codes))))
+         (codes (mapcar #'ps:ps-compile-file (getf pack :ps-files)))
+         (codes (remove-if-not (lambda (x) x) codes))
+         (init (get-init-code ps-package)))
+    (when (or (gadgets:not-empty code)
+               (some #'gadgets:not-empty codes))
+      (apply #'concatenate 'string (ps:ps* init) code (remove-if-not (lambda (x) x) codes)))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:part-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
