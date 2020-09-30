@@ -87,14 +87,37 @@
              (apply #'find-all-required-ps-packages ps-packages))
     (nreverse accum)))
 
+(defun make-init-preface (ps-packages)
+  "Make sure that the required structures exist for the init code."
+  (let* ((allpacks (apply #'find-all-required-ps-packages ps-packages))
+         (init-syms
+           (cl-utilities:collecting
+             (gadgets:do-hash-table (k pack allpacks)
+               (when (and pack (getf pack :init-code))
+                 (cl-utilities:collect k))))))
+    ;; Top level init must be in top level code, so we don't wrap in progn. Must compile each item in
+    ;; this list, then concatenate resulting js strings.
+    `((defparameter ,*import-manager-location*
+        (if ,*import-manager-location*
+            ,*import-manager-location*
+            (new -object)))
+      ,@(cl-utilities:collecting
+          (dolist (isym init-syms)
+            (cl-utilities:collect
+                `(unless (@ ,*import-manager-location* ,isym)
+                   (setf (@ ,*import-manager-location* ,isym) (new -object)))))))))
+
 (defun get-init-code (&rest ps-packages)
-  (cons
-   'progn
+  (append
+   (make-init-preface ps-packages)
    ;;Strip out (ps ) wrappers
    (gadgets:flatten-1
     (mapcar (lambda (code)
               (if (eq (car code) 'ps:ps) (cdr code) (list code)))
             (remove-if-not #'identity (apply #'get-init-code-blocks ps-packages))))))
+
+(defun get-init-js (&rest ps-packages)
+  (apply #'gadgets:strcat (mapcar (lambda (x) (ps:ps* x)) (apply #'get-init-code ps-packages))))
 
 (defun get-code (ps-package)
   (let* ((pack (or (get-package ps-package)
@@ -102,10 +125,10 @@
          (code (or (getf pack :code) ""))
          (codes (mapcar #'ps:ps-compile-file (getf pack :ps-files)))
          (codes (remove-if-not (lambda (x) x) codes))
-         (init (get-init-code ps-package)))
+         (init (get-init-js ps-package)))
     (when (or (gadgets:not-empty code)
                (some #'gadgets:not-empty codes))
-      (apply #'concatenate 'string (ps:ps* init) code (remove-if-not (lambda (x) x) codes)))))
+      (apply #'concatenate 'string init code (remove-if-not (lambda (x) x) codes)))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:part-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
