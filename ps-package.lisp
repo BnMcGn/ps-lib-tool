@@ -104,8 +104,8 @@
       ,@(cl-utilities:collecting
           (dolist (isym init-syms)
             (cl-utilities:collect
-                `(unless (@ ,*import-manager-location* ,isym)
-                   (setf (@ ,*import-manager-location* ,isym) (new -object)))))))))
+                `(unless (ps:chain ,*import-manager-location* (has-own-property ,isym))
+                   (setf (ps:@ ,*import-manager-location* ,isym) (new -object)))))))))
 
 (defun get-init-code (&rest ps-packages)
   (append
