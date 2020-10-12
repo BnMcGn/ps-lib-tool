@@ -52,13 +52,16 @@
      (list* (npm-executable-path) command)
      :output :lines)))
 
-(defun build-browserify-bundle (destination modules)
-  (uiop:with-current-directory (*cache-path*)
+;;FIXME Should present errors to user. Should offer to install missing modules, probably with a restart.
+;; Note: this might not be our final user interface.
+(defun build-browserify-bundle (destination modules &key working-dir)
+  (uiop:with-current-directory ((or working-dir *cache-path*))
     (uiop/run-program:run-program
      (list* (browserify-executable-path)
             (mapcan (lambda (module) (list "-r" module))
                     modules))
-     :output destination)))
+     :output destination
+     :error-output t)))
 
 (defun install-save (target-dir package &key version)
   "Causes the package information to be written to the dependencies section of package.json in the target dir."
@@ -110,7 +113,6 @@
   (apply #'npm-command
          `("uninstall"
            ,@(when save "--save") ,@(when global "-g") ,package-name)))
-
 
 
 
