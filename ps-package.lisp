@@ -27,7 +27,7 @@
          :export export
          :code code
          :ps-files (check-ps-files ps-files)
-         :host-package or (host-package *package*))))
+         :host-package (or host-package *package*))))
 
 (defun check-js-requirements (imps)
   (unless
