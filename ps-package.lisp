@@ -4,18 +4,20 @@
 
 (defvar *ps-packages* (make-hash-table :test 'eq))
 
-(defmacro def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files)
+(defmacro def-ps-package (pname &key ps-requirements js-requirements init-code export code ps-files
+                                  host-package)
   "Define a parenscript package. Ps-packages are used to bundle parenscript code and specify dependencies. Dependencies can be other ps-packages or npm libraries. Ps-packages can be built into javascript programmatically or can be exported as npm libraries."
   (declare (symbol pname))
   `(save-ps-package
     ',pname
     :ps-requirements ,ps-requirements :js-requirements ,js-requirements :init-code ',init-code
-    :export ,export :code ,code :ps-files ,ps-files))
+    :export ,export :code ,code :ps-files ,ps-files :host-package ,host-package))
 
 (defmacro get-package (name)
   `(gethash (alexandria:make-keyword (gadgets:to-uppercase ,name)) *ps-packages*))
 
-(defun save-ps-package (name &key ps-requirements js-requirements init-code export code ps-files)
+(defun save-ps-package (name &key ps-requirements js-requirements init-code export code ps-files
+                               host-package)
   (setf (get-package name)
         (list
          :ps-requirements ps-requirements
@@ -24,7 +26,8 @@
          ;;FIXME: export might be obsolete. Use a node lib.
          :export export
          :code code
-         :ps-files (check-ps-files ps-files))))
+         :ps-files (check-ps-files ps-files)
+         :host-package or (host-package *package*))))
 
 (defun check-js-requirements (imps)
   (unless
@@ -123,7 +126,9 @@
   (let* ((pack (or (get-package ps-package)
                    (error "PS package not found")))
          (code (or (getf pack :code) ""))
-         (codes (mapcar #'ps:ps-compile-file (getf pack :ps-files)))
+         ;;Make macros from used systems available to .ps files
+         (codes (let ((*package* (getf pack :host-package)))
+                  (mapcar #'ps:ps-compile-file (getf pack :ps-files))))
          (codes (remove-if-not (lambda (x) x) codes))
          (init (get-init-js ps-package)))
     (when (or (gadgets:not-empty code)
