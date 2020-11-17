@@ -17,7 +17,7 @@
   `(gethash (alexandria:make-keyword (gadgets:to-uppercase ,name)) *ps-packages*))
 
 (defun save-ps-package (name &key ps-requirements js-requirements init-code export code ps-files
-                               host-package)
+                               host-package host-system)
   (setf (get-package name)
         (list
          :ps-requirements ps-requirements
@@ -26,7 +26,9 @@
          ;;FIXME: export might be obsolete. Use a node lib.
          :export export
          :code code
-         :ps-files (check-ps-files ps-files)
+         ;;FIXME: Need better handling for when no system/package with ps-package name
+         :ps-files (when ps-files
+                     (check-ps-files ps-files (asdf:system-source-directory (or host-system name))))
          :host-package (or host-package *package*))))
 
 (defun check-js-requirements (imps)
@@ -36,10 +38,14 @@
     (error "Invalid item in js-requirements section"))
   imps)
 
-(defun check-ps-files (files)
-  (when (notevery #'probe-file files)
-    (error "Can't find specified ps-file"))
-  files)
+(defun get-host-system (ps-package)
+  (getf (get-package ps-package) :host-system (asdf:find-system ps-package)))
+
+(defun check-ps-files (files dir)
+  (uiop:with-current-directory (dir)
+    (when (notevery #'probe-file files)
+      (error "Can't find specified ps-file"))
+    files))
 
 (defun ensure-system-loaded (system)
   "If the system exists and isn't loaded, load it."
