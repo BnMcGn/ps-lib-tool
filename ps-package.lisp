@@ -128,18 +128,30 @@
 (defun get-init-js (&rest ps-packages)
   (apply #'gadgets:strcat (mapcar (lambda (x) (ps:ps* x)) (apply #'get-init-code ps-packages))))
 
+(defun get-ps-files (ps-package)
+  (mapcar (lambda (file)
+            (asdf:system-relative-pathname (get-host-system ps-package) file))
+          (getf (get-package ps-package) :ps-files)))
+
 (defun get-code (ps-package)
   (let* ((pack (or (get-package ps-package)
                    (error "PS package not found")))
          (code (or (getf pack :code) ""))
          ;;Make macros from used systems available to .ps files
          (codes (let ((*package* (getf pack :host-package)))
-                  (mapcar #'ps:ps-compile-file (getf pack :ps-files))))
+                  (mapcar #'ps:ps-compile-file (get-ps-files ps-package))))
          (codes (remove-if-not (lambda (x) x) codes))
          (init (get-init-js ps-package)))
     (when (or (gadgets:not-empty code)
                (some #'gadgets:not-empty codes))
       (apply #'concatenate 'string init code (remove-if-not (lambda (x) x) codes)))))
+
+(defun get-all-code (&rest ps-packages)
+  "Collects up all of the code, including init code, for the specified ps-packages and any ps-package dependencies. Does not bundle node/js dependency code."
+  (let ((packsyms (alexandria:hash-table-keys (apply #'find-all-required-ps-packages ps-packages))))
+    (concatenate
+     'string
+     (mapcar 'get-code packsyms))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:part-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
@@ -175,7 +187,17 @@
          (if val (list key val) key)))
      (gadgets:ordered-unique (nreverse accum)))))
 
-
+(defun build-single-bundle (outfile packsym/s)
+  "Writes all of the code from packsym/s and all of their dependencies - Parenscript and node - into a single bundle. Outfile must be a file name. Packsym/s can be either a ps-package name symbol or a list of name symbols."
+  (let* ((packsyms (ensure-list packsym/s))
+         (packcode (apply #'get-all-code packsyms)))
+    (uiop:with-temporary-file (:pathname cname)
+      (with-open-file (s cname :direction :output)
+        (write-string packcode s))
+      ;;FIXME: Should :working-dir be set? Problem: we have multiple ps-packages. Might need the
+      ;; node_modules dir from each.
+      (build-browserify-bundle
+       outfile (apply #'get-all-js-requirements packsyms) :toplevel-file cname))))
 
 
 

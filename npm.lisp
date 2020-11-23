@@ -54,12 +54,13 @@
 
 ;;FIXME Should present errors to user. Should offer to install missing modules, probably with a restart.
 ;; Note: this might not be our final user interface.
-(defun build-browserify-bundle (destination modules &key working-dir)
+(defun build-browserify-bundle (destination modules &key working-dir toplevel-file)
   (uiop:with-current-directory ((or working-dir *cache-path*))
     (uiop/run-program:run-program
-     (list* (browserify-executable-path)
-            (mapcan (lambda (module) (list "-r" module))
-                    modules))
+     `(,(browserify-executable-path)
+       ,@(mapcan (lambda (module) (list "-r" module))
+                 modules)
+       ,@(when toplevel-file (list toplevel-file)))
      :output destination
      :error-output t)))
 
