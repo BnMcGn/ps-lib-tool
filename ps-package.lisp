@@ -88,6 +88,9 @@
      (apply #'find-all-required-ps-packages ps-packages))
     (apply #'append (nreverse accum))))
 
+(defun get-all-js-requirement-names (&rest ps-packages)
+  (mapcar (lambda (itm) (if (listp itm) (car itm) itm)) (apply #'get-all-js-requirements ps-packages)))
+
 (defun get-init-code-blocks (&rest ps-packages)
   (let ((accum nil))
     (maphash (lambda (key pack)
@@ -149,9 +152,8 @@
 (defun get-all-code (&rest ps-packages)
   "Collects up all of the code, including init code, for the specified ps-packages and any ps-package dependencies. Does not bundle node/js dependency code."
   (let ((packsyms (alexandria:hash-table-keys (apply #'find-all-required-ps-packages ps-packages))))
-    (concatenate
-     'string
-     (mapcar 'get-code packsyms))))
+    (apply #'concatenate 'string
+           (remove-if-not #'identity (mapcar #'get-code packsyms)))))
 
 (defun strip-version-string (vstring)
   (nth-value 1 (gadgets:part-on-true (lambda (x) (<= (char-int #\0) (char-int x) (char-int #\9)))
@@ -192,12 +194,12 @@
   (let* ((packsyms (ensure-list packsym/s))
          (packcode (apply #'get-all-code packsyms)))
     (uiop:with-temporary-file (:pathname cname)
-      (with-open-file (s cname :direction :output)
+      (with-open-file (s cname :direction :output :if-exists :supersede)
         (write-string packcode s))
       ;;FIXME: Should :working-dir be set? Problem: we have multiple ps-packages. Might need the
       ;; node_modules dir from each.
       (build-browserify-bundle
-       outfile (apply #'get-all-js-requirements packsyms) :toplevel-file cname))))
+       outfile (apply #'get-all-js-requirement-names packsyms) :toplevel-file cname))))
 
 
 

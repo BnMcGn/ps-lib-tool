@@ -60,7 +60,7 @@
      `(,(browserify-executable-path)
        ,@(mapcan (lambda (module) (list "-r" module))
                  modules)
-       ,@(when toplevel-file (list toplevel-file)))
+       ,@(when toplevel-file (list (princ-to-string toplevel-file))))
      :output destination
      :error-output t)))
 

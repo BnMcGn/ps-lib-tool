@@ -18,5 +18,6 @@
    #:get-init-code
    #:@l
    #:chainl
-   #:get-code))
+   #:get-code
+   #:build-single-bundle))
 
