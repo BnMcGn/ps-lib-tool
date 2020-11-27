@@ -88,11 +88,28 @@
   (let ((package-name (if version (format nil "~a@~a" package-name version) package-name)))
     (apply #'npm-command `("install" ,@(when global (list "-g")) ,package-name))))
 
-(defun package-list ()
-  (mapcar (lambda (itm) (split-sequence:split-sequence
-                         #\@
-                         (gadgets:last-car (split-sequence:split-sequence #\  itm))))
-          (cdr (npm-command "list"))))
+
+(defun npm-list ()
+  (handler-bind ((uiop:subprocess-error
+                   (lambda (e) (declare (ignore e)) (invoke-restart 'continue))))
+    (uiop:with-current-directory ("/home/ben/quicklisp/local-projects/wf-static/")
+      (cl-json:decode-json-from-string
+       (uiop:run-program (list (ps-lib-tool::npm-executable-path) "list" "--json")
+                         :output :string)))))
+
+(defun npm-installed-packages (&key list-data)
+  (cl-utilities:collecting
+    (labels ((proc (itm)
+               (when (assoc :version (cdr itm))
+                 (cl-utilities:collect (cons (car itm) (gadgets:assoc-cdr :version (cdr itm)))))
+               (when (assoc :dependencies (cdr itm))
+                 (dolist (dep (gadgets:assoc-cdr :dependencies (cdr itm)))
+                   (proc dep)))))
+      (dolist (itm (gadgets:assoc-cdr :dependencies (or list-data (npm-list))))
+        (proc itm)))))
+
+(defun report-problems (packlist)
+  )
 
 (defun up-to-date-p (installed requested)
   (when installed
@@ -102,7 +119,7 @@
 
 (defun ensure-packages-installed (packlist)
   (let ((installed (hu:collecting-hash-table ()
-                       (dolist (pack (package-list))
+                       (dolist (pack (npm-list))
                          (hu:collect (car pack) (second pack))))))
     (dolist (rpack packlist)
       (alexandria:if-let ((version (gethash (car rpack) installed)))
