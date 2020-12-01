@@ -8,8 +8,9 @@
 (defvar *npm-executable-path* #p"/usr/bin/npm")
 (defvar *node-executable-path* #p"/usr/bin/nodejs")
 (defvar *browserify-path* #p"/usr/local/bin/browserify")
-(defvar *cache-path* (asdf:system-relative-pathname
-                      'ps-lib-tool "cache" :type :directory))
+(defvar *cache-path* (merge-pathnames "common-lisp/ps-lib-tool/" (gadgets:user-data-directory)))
+ ; (asdf:system-relative-pathname
+ ;                     'ps-lib-tool "cache" :type :directory))
 
 
 (defun package-json-path (path)
@@ -92,7 +93,7 @@
 (defun npm-list ()
   (handler-bind ((uiop:subprocess-error
                    (lambda (e) (declare (ignore e)) (invoke-restart 'continue))))
-    (uiop:with-current-directory ("/home/ben/quicklisp/local-projects/wf-static/")
+    (uiop:with-current-directory (*cache-path*)
       (cl-json:decode-json-from-string
        (uiop:run-program (list (ps-lib-tool::npm-executable-path) "list" "--json")
                          :output :string)))))
@@ -101,31 +102,43 @@
   (cl-utilities:collecting
     (labels ((proc (itm)
                (when (assoc :version (cdr itm))
-                 (cl-utilities:collect (cons (car itm) (gadgets:assoc-cdr :version (cdr itm)))))
+                 (cl-utilities:collect
+                     (mapcar (lambda (kv)
+                               (if (and (consp kv) (eq :dependencies (car kv)))
+                                   (mapcar #'car (cdr kv))
+                                   kv))
+                             itm)))
                (when (assoc :dependencies (cdr itm))
                  (dolist (dep (gadgets:assoc-cdr :dependencies (cdr itm)))
                    (proc dep)))))
       (dolist (itm (gadgets:assoc-cdr :dependencies (or list-data (npm-list))))
         (proc itm)))))
 
-(defun report-problems (packlist)
-  )
+(defun report-problems (packlist &key list-data)
+  "Packlist is a list of (or namestring (list namestring versionstring))"
+  (cl-utilities:collecting
+    (let* ((list-data (or list-data (npm-list)))
+           (packs (npm-installed-packages :list-data list-data)))
+      (print (mapcar #'car packs))
+      (dolist (pack packlist)
+        (let* ((name (if (consp pack) (car pack) pack))
+               (name (car (split-sequence:split-sequence #\/ name)))
+               (version (when (consp pack) (second pack))))
+          (if-let ((pdata (gadgets:assoc-cdr name packs :test #'string-equal)))
+            (if (and version (not (up-to-date-p (gadgets:assoc-cdr :version pdata) version)))
+                (cl-utilities:collect
+                    (format nil "Upgrade ~a. Installed version: ~a, need version ~a"
+                            name (gadgets:assoc-cdr :version pdata) version))
+                (when-let ((problems (gadgets:assoc-cdr :problems pdata)))
+                  (cl-utilities:collect (format nil "Problems found for ~a" name))
+                  (mapcar #'cl-utilities:collect problems)))
+            (cl-utilities:collect (format nil "Package not found: ~a" name))))))))
 
 (defun up-to-date-p (installed requested)
   (when installed
     (if requested
         (semver:version<= (semver:read-version-from-string requested)
                           (semver:read-version-from-string installed)))))
-
-(defun ensure-packages-installed (packlist)
-  (let ((installed (hu:collecting-hash-table ()
-                       (dolist (pack (npm-list))
-                         (hu:collect (car pack) (second pack))))))
-    (dolist (rpack packlist)
-      (alexandria:if-let ((version (gethash (car rpack) installed)))
-        (unless (up-to-date-p version (second rpack))
-          (install (car rpack) :version (second rpack)))
-        (install (car rpack) :version (second rpack))))))
 
 (defun uninstall (package-name &key save global)
   (apply #'npm-command

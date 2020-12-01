@@ -19,5 +19,6 @@
    #:@l
    #:chainl
    #:get-code
-   #:build-single-bundle))
+   #:build-single-bundle
+   #:npm-installed-packages))
 

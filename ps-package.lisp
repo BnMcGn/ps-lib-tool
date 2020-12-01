@@ -192,14 +192,18 @@
 (defun build-single-bundle (outfile packsym/s)
   "Writes all of the code from packsym/s and all of their dependencies - Parenscript and node - into a single bundle. Outfile must be a file name. Packsym/s can be either a ps-package name symbol or a list of name symbols."
   (let* ((packsyms (ensure-list packsym/s))
-         (packcode (apply #'get-all-code packsyms)))
+         (packcode (apply #'get-all-code packsyms))
+         (jsreqs (apply #'get-all-js-requirement-names packsyms))
+         (problems (report-problems jsreqs)))
+    (when problems
+      (mapcar #'print problems)
+      (warn "Might not be able to build bundle!"))
     (uiop:with-temporary-file (:pathname cname)
       (with-open-file (s cname :direction :output :if-exists :supersede)
         (write-string packcode s))
       ;;FIXME: Should :working-dir be set? Problem: we have multiple ps-packages. Might need the
       ;; node_modules dir from each.
-      (build-browserify-bundle
-       outfile (apply #'get-all-js-requirement-names packsyms) :toplevel-file cname))))
+      (build-browserify-bundle outfile jsreqs :toplevel-file cname))))
 
 
 
