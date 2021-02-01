@@ -31,12 +31,14 @@
                      (check-ps-files ps-files (asdf:system-source-directory (or host-system name))))
          :host-package (or host-package *package*))))
 
-(defun check-js-requirements (imps)
-  (unless
-      (every (lambda (x) (or (stringp x) (and (listp x) (every #'stringp x))))
-             imps)
-    (error "Invalid item in js-requirements section"))
-  imps)
+(defun check-js-requirements (imports)
+  (dolist (imp imports)
+    (unless (or (stringp imp)
+                (and
+                 (listp imp)
+                 (every (lambda (x) (or (member x '(:version :npm-string)) (stringp x))) imp)))
+      (error "Invalid item in js-requirements section")))
+  imports)
 
 (defun get-host-system (ps-package)
   (getf (get-package ps-package) :host-system (asdf:find-system ps-package)))
